@@ -1,5 +1,9 @@
 import _ from "lodash";
 
+import {Logger} from "util/logging/Logger";
+
+const L = Logger.getLogger("simplifyOrig.js");
+
 // square distance between 2 points
 export function getSqDist(p1, p2) {
 
@@ -65,7 +69,8 @@ function simplifyDPStep(points, first, last, sqTolerance, simplified) {
 
     for (var i = first + 1; i < last; i++) {
         var sqDist = getSqSegDist(points[i], points[first], points[last]);
-
+        // L.info("i, first, last", i, first, last);
+// L.info("sqDist", sqTolerance, sqDist, points[i], "   ", points[first], points[last]);
         if (sqDist > maxSqDist) {
             index = i;
             maxSqDist = sqDist;

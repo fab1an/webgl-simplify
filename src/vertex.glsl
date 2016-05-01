@@ -1,4 +1,3 @@
-uniform sampler2D u_sourceData;
 varying vec2 vUv;
 
 void main() {

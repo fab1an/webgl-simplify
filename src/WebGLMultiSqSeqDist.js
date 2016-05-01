@@ -1,5 +1,7 @@
 import {Logger} from "util/logging/Logger";
+import {checkState} from "util/Preconditions";
 import Three from "three";
+import _ from "lodash";
 
 const L = Logger.getLogger("WebGLMultiSqSeqDist");
 
@@ -12,7 +14,7 @@ export default class WebGLMultiSqSeqDist {
             new Three.ShaderMaterial({
                 uniforms: this.uniforms,
                 vertexShader: require("raw!vertex.glsl"),
-                fragmentShader: require("raw!fragmentMultiSqSegDist.glsl")
+                fragmentShader: require("raw!fragmentSimplifyDP.glsl")
             });
 
         this.width = 0;
@@ -35,11 +37,21 @@ export default class WebGLMultiSqSeqDist {
 
             L.info("required ", requiredWidth, ": changing", this.width, " -> ", newWidth);
             this.width = newWidth;
-            this.data = new Float32Array(this.width * 3);
-            this.texture = new Three.DataTexture(this.data, this.width, 1, Three.RGBFormat, Three.FloatType);
-            this.uniforms.u_sourceData = {
+
+            /* points */
+            this.pointData = new Float32Array(this.width * 3);
+            this.pointTexture = new Three.DataTexture(this.pointData, this.width, 1, Three.RGBFormat, Three.FloatType);
+            this.uniforms.u_points = {
                 type: "t",
-                value: this.texture
+                value: this.pointTexture
+            }
+
+            /* chosen matrix */
+            this.chosenData = new Float32Array(this.width * 3);
+            this.chosenTexture = new Three.DataTexture(this.chosenData, this.width, 1, Three.RGBFormat, Three.FloatType);
+            this.uniforms.u_data = {
+                type: "t",
+                value: this.chosenTexture
             }
 
             /* cube and mesh */
@@ -67,74 +79,122 @@ export default class WebGLMultiSqSeqDist {
             });
 
             /* read back pixels */
-            this.output = new Float32Array(4 * this.width);
+            this.outDistances = new Float32Array(4 * this.width);
         }
     }
 
-    getMultiSqSegDist(points, first, last, sqTolerance, debug = false) {
-        const renderLength = last - first - 1,
-            p1 = points[first],
-            p2 = points[last]
+    simplify(points, sqTolerance, debug) {
+        sqTolerance = sqTolerance * sqTolerance;
+        this.update(points.length);
 
-        debug && L.info("renderLength, p1, p2", renderLength, p1, p2);
-
-        /* resize it */
-        this.update(renderLength);
-
-        /* clear data */
-        // for (let i = 0; i < this.data.length; i++) {
-        //     this.data[i] = 0;
-        // }
-
-        /* set data */
-        for (let i = 0; i < renderLength; i++) {
-            debug && L.info("points[first + 1 + i]", points[first + 1 + i]);
-            this.data[(this.width * 3) - (i * 3) - 3] = points[first + 1 + i].x;
-            this.data[(this.width * 3) - (i * 3) - 2] = points[first + 1 + i].y;
+        /* fill in points */
+        for (let i = 0; i < points.length; i++) {
+            debug && L.info("points[i]", points[i]);
+            this.pointData[i * 3] = points[i].x;
+            this.pointData[i * 3 + 1] = points[i].y;
         }
-        debug && L.info("data", this.data);
+        debug && L.info("pointData", this.pointData);
+        this.pointTexture.needsUpdate = true;
 
-        this.texture.needsUpdate = true;
-        this.uniforms.p1 = {
-            type: "3fv",
-            value: new Three.Vector3(p1.x, p1.y, 0)
-        }
-        this.uniforms.p2 = {
-            type: "3fv",
-            value: new Three.Vector3(p2.x, p2.y, 0)
+        /* set seqLength */
+        this.uniforms.seqLength = {
+            type: "f",
+            value: points.length
         }
 
-        /* set buffertexture size */
-        // this.bufferTexture.setSize(renderLength, 1);
-        // this.camera.right = renderLength;
-        // this.camera.updateProjectionMatrix();
+        /* clear chosen */
+        _.fill(this.chosenData, 0, 0, points.length);
 
-        this.renderer.render(this.scene, this.camera, this.bufferTexture);
+        /* chose first and last point */
+        this.chosenData[3 * 0] = 1;
+        this.chosenData[3 * (points.length - 1)] = 1;
 
-        /* clear output buffer */
-        // for (let i = 0; i < this.output.length; i++) {
-        //     this.output[i] = 0;
-        // }
+        let hasZeros = true;
+        while (hasZeros) {
+            const w = L.newStopwatch("test");
 
-        debug && L.info("output", this.output);
-        const gl = this.renderer.context;
-        gl.readPixels(0, 0, renderLength, 1, gl.RGBA, gl.FLOAT, this.output);
-        debug && L.info("output", this.output);
+            w.newLap("p1,p2");
+            /* left to right: set p1 */
+            let p1 = 0;
+            for (let i = 0; i < points.length; i++) {
+                const marker = this.chosenData[i * 3];
+                debug && L.info("chosen[i]", marker);
+                if (marker === 0) {
+                    this.chosenData[i * 3 + 1] = p1;
+                } else if (marker === 1) {
+                    p1 = i;
+                }
+            }
+            let p2 = points.length - 1;
+            for (let i = (points.length - 1); i >= 0; i--) {
+                const marker = this.chosenData[i * 3];
+                if (marker === 0) {
+                    this.chosenData[i * 3 + 2] = p2;
+                } else if (marker === 1) {
+                    p2 = i;
+                }
+            }
+            debug && L.info("chosenData", this.chosenData);
 
-        let index = -1, max = sqTolerance;
-        for (let i = 0; i < renderLength; i++) {
-            let d = this.output[i * 4];
-            debug && L.info("i, d", i, d);
-            if (d > max) {
-                max = d;
-                index = i;
+            /* render */
+            this.chosenTexture.needsUpdate = true;
+            w.newLap("render");
+            this.renderer.render(this.scene, this.camera, this.bufferTexture);
+
+            /* output texture */
+            w.newLap("output");
+            debug && L.info("output", this.outDistances);
+            const gl = this.renderer.context;
+            gl.readPixels(0, 0, this.width, 1, gl.RGBA, gl.FLOAT, this.outDistances);
+            debug && L.info("output", this.outDistances);
+
+            /* walk through result */
+            w.newLap("walk");
+            let curSelect = -1;
+            let curMax = sqTolerance;
+            let groupStart = 0;
+            for (let i = 0; i < points.length; i++) {
+                const marker = this.chosenData[i * 3];
+                if (marker === 1) {
+                    if (curSelect === -1) {
+                        for (let k = (groupStart + 1); k < i; k++) {
+                            this.chosenData[k * 3] = -1;
+                        }
+                    } else {
+                        this.chosenData[curSelect * 3] = 1;
+                    }
+                    curSelect = -1;
+                    curMax = sqTolerance;
+                    groupStart = i;
+
+                } else if (marker === 0) {
+                    const d = this.outDistances[(this.width * 4) - (i + 1) * 4];
+                    if (d > curMax) {
+                        curMax = d;
+                        curSelect = i;
+                    }
+                }
+            }
+
+            hasZeros = false;
+            for (let i = 0; i < points.length; i++) {
+                const marker = this.chosenData[i * 3];
+                if (marker === 0) {
+                    hasZeros = true;
+                    break;
+                }
+            }
+
+            w.printTimes();
+        }
+
+        let simplified = [];
+        for (let i = 0; i < points.length; i++) {
+            if (this.chosenData[i * 3] === 1) {
+                simplified.push(points[i]);
             }
         }
-        if (index !== -1) {
-            return index + first + 1;
 
-        } else {
-            return index
-        }
+        return simplified;
     }
 }
