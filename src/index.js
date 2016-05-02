@@ -5,6 +5,7 @@ import * as orig from "./simplifyOrig";
 import WebGLMultiSqSeqDist from "./WebGLMultiSqSeqDist";
 
 const L = Logger.getLogger("index.js");
+const patched = new WebGLMultiSqSeqDist();
 
 function compare(text, v1, v2, output = false) {
     L.info(text, _.isEqual(v1, v2))
@@ -17,14 +18,15 @@ function compare(text, v1, v2, output = false) {
 /* long points */
 let points = testData1;
 
-//points = eval(require("raw!./test2.json"));
-const n = 1;
 
+// patched.simplify(points.slice(0,5), 5, true)
+// throw "";
+
+//points = eval(require("raw!./test2.json"));
+const n = 5;
 L.info("points.length", points.length)
 
 let pointsOrig, pointsMine;
-
-const patched = new WebGLMultiSqSeqDist();
 
 const w = L.newStopwatch("test");
 

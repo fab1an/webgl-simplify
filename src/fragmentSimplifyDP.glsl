@@ -24,9 +24,8 @@ void main() {
     //gl_FragColor = vec4(gl_FragCoord.x, data);
 
     if (marker < 0.5 && marker > -0.5) {
-        vec2 refPointData = texture2D(u_refpoints, vec2(vUv.x, 0)).rg;
-        vec3 p1 = texture2D(u_points, vec2(refPointData.r/seqLength, 0)).rgb;
-        vec3 p2 = texture2D(u_points, vec2(refPointData.g/seqLength, 0)).rgb;
+        vec3 p1 = texture2D(u_refpoints, vec2(vUv.x, 0.0)).rgb;
+        vec3 p2 = texture2D(u_refpoints, vec2(vUv.x, 1.0)).rgb;
         float dist = sqSegDist(p1, p2, point);
 
         gl_FragColor = vec4(dist, 0, 0, 0);

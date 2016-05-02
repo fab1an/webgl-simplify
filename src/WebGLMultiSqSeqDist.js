@@ -47,15 +47,15 @@ export default class WebGLMultiSqSeqDist {
             }
 
             /* chosen matrix */
-            this.chosenData = new Uint8Array(this.width);
-            this.chosenTexture = new Three.DataTexture(this.chosenData, this.width, 1, Three.LuminanceFormat, Three.UnsignedByteType);
+            this.chosenData = new Float32Array(this.width * 3);
+            this.chosenTexture = new Three.DataTexture(this.chosenData, this.width, 1, Three.RGBFormat, Three.FloatType);
             this.uniforms.u_chosen = {
                 type: "t",
                 value: this.chosenTexture
             }
 
-            this.refPointData = new Float32Array(this.width * 3);
-            this.refPointTexture = new Three.DataTexture(this.refPointData, this.width, 1, Three.RGBFormat, Three.FloatType);
+            this.refPointData = new Float32Array(this.width * 6);
+            this.refPointTexture = new Three.DataTexture(this.refPointData, this.width, 2, Three.RGBFormat, Three.FloatType);
             this.uniforms.u_refpoints = {
                 type: "t",
                 value: this.refPointTexture
@@ -110,36 +110,41 @@ export default class WebGLMultiSqSeqDist {
         }
 
         /* clear chosen */
-        _.fill(this.chosenData, 0, 0, points.length);
+        _.fill(this.chosenData, 0, 0, points.length * 3);
 
         /* chose first and last point */
-        this.chosenData[0] = 1;
-        this.chosenData[(points.length - 1)] = 1;
+        this.chosenData[0 * 3] = 1;
+        this.chosenData[(points.length - 1) * 3] = 1;
 
         let hasZeros = true;
         while (hasZeros) {
             /* left to right: set p1 */
-            let p1 = 0;
+            let idx_p1 = 0;
             for (let i = 0; i < points.length; i++) {
-                const marker = this.chosenData[i];
+                const marker = this.chosenData[i * 3];
                 debug && L.info("chosen[i]", marker);
                 if (marker === 0) {
-                    this.refPointData[i * 3] = p1;
+                    const p1 = points[idx_p1]
+                    this.refPointData[i * 3] = p1.x;
+                    this.refPointData[i * 3 + 1] = p1.y;
                 } else if (marker === 1) {
-                    p1 = i;
+                    idx_p1 = i;
                 }
             }
             /* and back right to left: set p2 */
-            let p2 = points.length - 1;
+            let idx_p2 = points.length - 1;
             for (let i = (points.length - 1); i >= 0; i--) {
-                const marker = this.chosenData[i];
+                const marker = this.chosenData[i * 3];
                 if (marker === 0) {
-                    this.refPointData[i * 3 + 1] = p2;
+                    const p2 = points[idx_p2]
+                    this.refPointData[(this.width * 3) + i * 3] = p2.x;
+                    this.refPointData[(this.width * 3) + i * 3 + 1] = p2.y;
                 } else if (marker === 1) {
-                    p2 = i;
+                    idx_p2 = i;
                 }
             }
             debug && L.info("chosenData", this.chosenData);
+            debug && L.info("refPointData", this.refPointData);
 
             /* render */
             this.refPointTexture.needsUpdate = true;
@@ -157,14 +162,14 @@ export default class WebGLMultiSqSeqDist {
             let curMax = sqTolerance;
             let groupStart = 0;
             for (let i = 0; i < points.length; i++) {
-                const marker = this.chosenData[i];
+                const marker = this.chosenData[i * 3];
                 if (marker === 1) {
                     if (curSelect === -1) {
                         for (let k = (groupStart + 1); k < i; k++) {
-                            this.chosenData[k] = -1;
+                            this.chosenData[k * 3] = -1;
                         }
                     } else {
-                        this.chosenData[curSelect] = 1;
+                        this.chosenData[curSelect * 3] = 1;
                     }
                     curSelect = -1;
                     curMax = sqTolerance;
@@ -181,7 +186,7 @@ export default class WebGLMultiSqSeqDist {
 
             hasZeros = false;
             for (let i = 0; i < points.length; i++) {
-                const marker = this.chosenData[i];
+                const marker = this.chosenData[i * 3];
                 if (marker === 0) {
                     hasZeros = true;
                     break;
@@ -192,7 +197,7 @@ export default class WebGLMultiSqSeqDist {
 
         let simplified = [];
         for (let i = 0; i < points.length; i++) {
-            if (this.chosenData[i] === 1) {
+            if (this.chosenData[i * 3] === 1) {
                 simplified.push(points[i]);
             }
         }
