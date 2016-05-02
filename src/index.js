@@ -1,5 +1,5 @@
 import {Logger} from "util/logging/Logger";
-import {points, simplified as simplifiedPoints} from "./simplifyTestData";
+import {points as testData1} from "./simplifyTestData";
 import _ from "lodash";
 import * as orig from "./simplifyOrig";
 import WebGLMultiSqSeqDist from "./WebGLMultiSqSeqDist";
@@ -14,28 +14,33 @@ function compare(text, v1, v2, output = false) {
     }
 }
 
+/* long points */
+let points = testData1;
+
+//points = eval(require("raw!./test2.json"));
+const n = 1;
+
+L.info("points.length", points.length)
+
+let pointsOrig, pointsMine;
+
 const patched = new WebGLMultiSqSeqDist();
 
-compare("test",
-    orig.simplify(points.slice(0, 5), 5, true),
-    patched.simplify(points.slice(0, 5), 25, true),
-    true
-);
-
-compare("simplify",
-    orig.simplify(points, 5, true),
-    patched.simplify(points, 5, false)
-);
-
 const w = L.newStopwatch("test");
-const n = 5;
+
 w.newLap(`orig x${n}`);
 for (let i = 0; i < n; i++) {
-    orig.simplify(points, 5, true)
+    pointsOrig = orig.simplify(points, 5, true)
 }
 
 w.newLap(`patched x${n}`);
 for (let i = 0; i < n; i++) {
-    patched.simplify(points, 5, false)
+    pointsMine = patched.simplify(points, 5, false)
 }
 w.printTimes();
+
+compare("test",
+    pointsOrig,
+    pointsMine,
+    true
+);

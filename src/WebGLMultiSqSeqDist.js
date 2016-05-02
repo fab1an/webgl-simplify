@@ -111,9 +111,6 @@ export default class WebGLMultiSqSeqDist {
 
         let hasZeros = true;
         while (hasZeros) {
-            const w = L.newStopwatch("test");
-
-            w.newLap("p1,p2");
             /* left to right: set p1 */
             let p1 = 0;
             for (let i = 0; i < points.length; i++) {
@@ -138,18 +135,15 @@ export default class WebGLMultiSqSeqDist {
 
             /* render */
             this.chosenTexture.needsUpdate = true;
-            w.newLap("render");
             this.renderer.render(this.scene, this.camera, this.bufferTexture);
 
             /* output texture */
-            w.newLap("output");
             debug && L.info("output", this.outDistances);
             const gl = this.renderer.context;
             gl.readPixels(0, 0, this.width, 1, gl.RGBA, gl.FLOAT, this.outDistances);
             debug && L.info("output", this.outDistances);
 
             /* walk through result */
-            w.newLap("walk");
             let curSelect = -1;
             let curMax = sqTolerance;
             let groupStart = 0;
@@ -185,7 +179,6 @@ export default class WebGLMultiSqSeqDist {
                 }
             }
 
-            w.printTimes();
         }
 
         let simplified = [];

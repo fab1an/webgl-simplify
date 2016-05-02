@@ -36,10 +36,12 @@ const config = {
             test: /\.css$/,
             include: [NODE_MODULES, SRC],
             loader: 'style-loader!css-loader!postcss-loader',
-        }, {
-            test: /\.json$/,
-            loader: "json-loader"
-        }]
+        }
+        // , {
+//             test: /\.json$/,
+//             loader: "json-loader"
+//         }
+    ]
     },
     resolve: {
         root: SRC,
