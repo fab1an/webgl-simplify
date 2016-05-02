@@ -16,14 +16,11 @@ function compare(text, v1, v2, output = false) {
 }
 
 /* long points */
-let points = testData1;
-
-
-// patched.simplify(points.slice(0,5), 5, true)
-// throw "";
+let points = testData1//.slice(0,5);
 
 //points = eval(require("raw!./test2.json"));
-const n = 5;
+const n = 10;
+
 L.info("points.length", points.length)
 
 let pointsOrig, pointsMine;
