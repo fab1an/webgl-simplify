@@ -14,20 +14,12 @@ float sqSegDist(vec3 p1, vec3 p2, vec3 p) {
 }
 
 void main() {
-    vec3 point = texture2D(u_points, vec2(vUv.x, 0)).rgb;
+    vec4 data = texture2D(u_points, vec2(vUv.x, 0));
+    vec4 refPoint = texture2D(u_refpoints, vec2(vUv.x, 0.0));
 
-    /* marker: -1   ignore point */
-    /* marker: 0    calculate    */
-    /* marker: 1    endpoint     */
-    // vec4 color = texture2D(u_chosen, vec2(vUv.x, 0));
-    // color *= 255.0;
-    // float marker = color.r;
-    float marker = texture2D(u_chosen, vec2(vUv.x, 0)).r * 255.0;
+    vec3 point = data.rgb;
+    float marker = data.a;
 
-    //gl_FragColor = vec4(gl_FragCoord.x, data);
-    if (marker < 0.5 && marker > -0.5) {
-        vec4 refPoint = texture2D(u_refpoints, vec2(vUv.x, 0.0));
-        float dist = sqSegDist(vec3(refPoint.rg, 0), vec3(refPoint.ba, 0), point);
-        gl_FragColor = vec4(dist, 0, 0, marker);
-    }
+    float dist = sqSegDist(vec3(refPoint.rg, 0), vec3(refPoint.ba, 0), point);
+    gl_FragColor = vec4(dist, 0, 0, marker);
 }
