@@ -18,7 +18,7 @@ function compare(text, v1, v2, output = false) {
 /* long points */
 let points = testData1//.slice(5, 10);
 
-//points = eval(require("raw!./test2.json"));
+points = eval(require("raw!./test2.json")).slice(10000, 26000);
 const n = 5;
 
 L.info("points.length", points.length)

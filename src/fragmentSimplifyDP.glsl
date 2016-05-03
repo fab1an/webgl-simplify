@@ -1,7 +1,6 @@
 uniform sampler2D u_points;
 uniform sampler2D u_chosen;
 uniform sampler2D u_refpoints;
-uniform float seqLength;
 varying vec2 vUv;
 
 float sqSegDist(vec3 p1, vec3 p2, vec3 p) {
