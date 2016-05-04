@@ -21,7 +21,9 @@ export default class WebGLMultiSqSeqDist {
 
         this.width = 0;
         this.scene = new Three.Scene();
-        this.camera = new Three.PerspectiveCamera(90, 1, 0.1, 10);
+        this.camera = new Three.OrthographicCamera(-0.5, 0.5, -0.5, 0.5, 0, 10);
+        //this.camera = new Three.PerspectiveCamera(90, 1, 0.1, 10);
+        //this.camera.position.z = 1;
         this.scene.add(this.camera);
     }
 
@@ -54,18 +56,25 @@ export default class WebGLMultiSqSeqDist {
                 this.scene.remove(this.mesh);
             }
 
-            // let geom = new Three.BoxBufferGeometry(1, 1, 1);
-
-            let geom = new Three.BufferGeometry();
-            const vertices = new Float32Array([
-                -0.5, -0.5, -1,
-                1, -0.5, -1,
-                0.5, 0.5, -1
-            ]);
-            geom.addAttribute('position', new Three.BufferAttribute(vertices, 3));
-
+            const geom = new Three.BoxBufferGeometry(1, 1, 1);
+            // const geom = new Three.BufferGeometry();
+//             const vertices = new Float32Array([
+//                 -50, -20, 0,
+//                 50, -20, 0,
+//                 0, 30, 0
+//             ]);
+//            this.mesh.position.x = 100
+            // const arrUv = new Float32Array(this.width * 2);
+//             for (let i = 0; i < this.width; i++) {
+//                 arrUv[i] = i / this.width;
+//                 arrUv[i+1] = 0.5;
+//             }
+        //    geom.addAttribute('position', new Three.BufferAttribute(vertices, 3));
+            // geom.addAttribute('uv', new Three.BufferAttribute(arrUv, 2));
+            this.material = new Three.MeshBasicMaterial({color: 0x00ff00});
             this.mesh = new Three.Mesh(geom, this.material);
             this.scene.add(this.mesh);
+            //this.mesh.position.x = this.width / 2
 
             /* scene and camera */
             // this.camera.right = this.width;
