@@ -9,12 +9,10 @@ export default class WebGLMultiSqSeqDist {
 
     constructor() {
         this.renderer = new Three.WebGLRenderer();
-        this.renderer.setSize(200, 200);
+        this.renderer.setSize(50, 50);
         document.getElementById("app").appendChild(this.renderer.domElement);
 
-        this.uniforms = {};
         this.material = new Three.ShaderMaterial({
-            uniforms: this.uniforms,
             vertexShader: require("raw!vertex.glsl"),
             fragmentShader: require("raw!fragmentSimplifyDP.glsl")
         });
@@ -30,48 +28,44 @@ export default class WebGLMultiSqSeqDist {
         if (this.width < requiredWidth) {
             let newWidth = requiredWidth;
 
-            newWidth = 300;
             L.info("required ", requiredWidth, ": changing", this.width, " -> ", newWidth);
             this.width = newWidth;
-
-            /* points */
-            this.pointData = new Float32Array(this.width * 3);
-            this.pointTexture = new Three.DataTexture(this.pointData, this.width, 1, Three.RGBFormat, Three.FloatType);
-            this.uniforms.u_points = {
-                type: "t",
-                value: this.pointTexture
-            }
-
-            this.refPointData = new Float32Array(this.width * 4);
-            this.refPointTexture = new Three.DataTexture(this.refPointData, this.width, 1, Three.RGBAFormat, Three.FloatType);
-            this.uniforms.u_refpoints = {
-                type: "t",
-                value: this.refPointTexture
-            }
 
             /* cube and mesh */
             if (exists(this.mesh)) {
                 this.scene.remove(this.mesh);
             }
 
-            // let geom = new Three.BoxBufferGeometry(1, 1, 1);
-
-            let geom = new Three.BufferGeometry();
-            const vertices = new Float32Array([
-                -0.5, -0.5, -1,
-                1, -0.5, -1,
-                0.5, 0.5, -1
-            ]);
+            const vertices = new Float32Array(this.width * 3);
+            for (let i = 0; i < this.width; i++) {
+                vertices[i * 3] = -1 + (2 * i / this.width);
+                vertices[i * 3 + 1] = -0.5
+                vertices[i * 3 + 2] = -1;
+            }
+            const geom = new Three.BufferGeometry();
+            this.geom = geom;
             geom.addAttribute('position', new Three.BufferAttribute(vertices, 3));
 
-            this.mesh = new Three.Mesh(geom, this.material);
-            this.scene.add(this.mesh);
+            const indices = new Float32Array(this.width);
+            for (let i = 0; i < this.width; i++) {
+                indices[i] = i;
+            }
+            geom.addAttribute('idxP', new Three.BufferAttribute(indices, 1));
 
-            /* scene and camera */
-            // this.camera.right = this.width;
-//             this.camera.left = 0;
+            /* points */
+            this.pointData = new Float32Array(this.width * 3);
+            geom.addAttribute('point', new Three.BufferAttribute(this.pointData, 3));
 
-            //this.camera.updateProjectionMatrix();
+            /* p1 */
+            this.p1Data = new Float32Array(this.width * 3);
+            geom.addAttribute('p1', new Three.BufferAttribute(this.p1Data, 3));
+
+            /* p2 */
+            this.p2Data = new Float32Array(this.width * 3);
+            geom.addAttribute('p2', new Three.BufferAttribute(this.p2Data, 3));
+
+            /* scene */
+            this.scene.add(new Three.Points(geom, this.material));
 
             /* render into texture */
             if (exists(this.bufferTexture)) {
@@ -106,13 +100,6 @@ export default class WebGLMultiSqSeqDist {
             this.pointData[i * 3 + 1] = points[i].y;
         }
         debug && L.info("pointData", this.pointData);
-        this.pointTexture.needsUpdate = true;
-
-        /* set seqLength */
-        this.uniforms.seqLength = {
-            type: "f",
-            value: points.length
-        }
 
         /* clear chosen */
         for (let i = 0; i < points.length; i++) {
@@ -134,8 +121,8 @@ export default class WebGLMultiSqSeqDist {
                 if (marker === 0) {
                     hasZeros = true;
                     const p1 = points[idx_p1]
-                    this.refPointData[i * 4] = p1.x;
-                    this.refPointData[i * 4 + 1] = p1.y;
+                    this.p1Data[i * 3] = p1.x;
+                    this.p1Data[i * 3 + 1] = p1.y;
                 } else if (marker === 1) {
                     idx_p1 = i;
                 }
@@ -146,17 +133,20 @@ export default class WebGLMultiSqSeqDist {
                 const marker = this.getChosen(i);
                 if (marker === 0) {
                     const p2 = points[idx_p2]
-                    this.refPointData[i * 4 + 2] = p2.x;
-                    this.refPointData[i * 4 + 3] = p2.y;
+                    this.p2Data[i * 3] = p2.x;
+                    this.p2Data[i * 3 + 1] = p2.y;
                 } else if (marker === 1) {
                     idx_p2 = i;
                 }
             }
-            debug && L.info("refPointData", this.refPointData);
+            // debug && L.info("refPointData", this.refPointData);
 
             /* render */
-            this.refPointTexture.needsUpdate = true;
-            this.renderer.render(this.scene, this.camera);
+            // this.refPointTexture.needsUpdate = true;
+            this.geom.attributes.point.needsUpdate = true;
+            this.geom.attributes.p1.needsUpdate = true;
+            this.geom.attributes.p2.needsUpdate = true;
+//            this.renderer.render(this.scene, this.camera);
             this.renderer.render(this.scene, this.camera, this.bufferTexture);
 
             /* output texture */

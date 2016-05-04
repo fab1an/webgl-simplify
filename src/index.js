@@ -16,7 +16,7 @@ function compare(text, v1, v2, output = false) {
 }
 
 /* long points */
-let points = testData1.slice(5, 10);
+let points = testData1//.slice(5, 10);
 
 // points = eval(require("raw!./test2.json")).slice(1000, 3000);
 const n = 1;
@@ -34,7 +34,7 @@ for (let i = 0; i < n; i++) {
 
 w.newLap(`patched x${n}`);
 for (let i = 0; i < n; i++) {
-    pointsMine = patched.simplify(points, 5, true)
+    pointsMine = patched.simplify(points, 5, false)
 }
 w.printTimes();
 
